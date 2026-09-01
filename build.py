@@ -24,12 +24,12 @@ def build_executable():
         "--onefile",
         "--windowed",
         "--name=MinecraftBotClient",
-        "--add-data=config.json:.",
-        "main.py"
+        "--add-data=src/config.json:.",
+        "src/main.py"
     ]
     
-    if os.path.exists("assets/icon.ico"):
-        cmd.insert(4, "--icon=assets/icon.ico")
+    if os.path.exists("src/assets/icon.ico"):
+        cmd.insert(4, "--icon=src/assets/icon.ico")
     
     subprocess.check_call(cmd)
     
