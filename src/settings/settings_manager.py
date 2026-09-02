@@ -1,39 +1,56 @@
 import json
 import os
+import sys
 
 class SettingsManager:
-    CONFIG_FILE = "config.json"
     DEFAULT_CONFIG = {
         "version": "1.0.0",
         "username": "",
         "server_address": "localhost:25565",
-        "minecraft_version": "1.8.9"
+        "minecraft_version": "1.8.9",
+        "language": "zh"
     }
 
     def __init__(self):
+        self.CONFIG_FILE = self._resolve_config_path()
         self.config = self.load_config()
+
+    def _resolve_config_path(self):
+        exe_name = os.path.splitext(os.path.basename(sys.argv[0]))[0]
+        script_dir = os.path.dirname(os.path.abspath(sys.argv[0])) if getattr(sys, 'frozen', False) else os.getcwd()
+
+        candidates = ["config.json"]
+        if exe_name.endswith("-zh"):
+            candidates.insert(0, "config.zh.json")
+        elif exe_name.endswith("-en"):
+            candidates.insert(0, "config.en.json")
+
+        for name in candidates:
+            path = os.path.join(script_dir, name)
+            if os.path.exists(path):
+                return path
+
+        return os.path.join(script_dir, "config.json")
 
     def load_config(self):
         config = self.DEFAULT_CONFIG.copy()
         if os.path.exists(self.CONFIG_FILE):
             try:
-                with open(self.CONFIG_FILE, 'r') as f:
+                with open(self.CONFIG_FILE, 'r', encoding='utf-8-sig') as f:
                     loaded = json.load(f)
-                # 补全缺失的默认键
                 for key, value in self.DEFAULT_CONFIG.items():
                     loaded.setdefault(key, value)
                 config = loaded
             except Exception:
                 pass
         else:
-            # 首次运行自动生成配置文件，方便用户填写服务器信息
             self.config = config
             self.save_config()
         return config
 
     def save_config(self):
         try:
-            with open(self.CONFIG_FILE, 'w') as f:
+            with open(self.CONFIG_FILE, 'w', encoding='utf-8') as f:
                 json.dump(self.config, f, indent=2)
         except Exception as e:
             print(f"Error saving config: {str(e)}")
@@ -41,23 +58,14 @@ class SettingsManager:
     def get_username(self):
         return self.config.get("username", "")
 
-    def set_username(self, username):
-        self.config["username"] = username
-        self.save_config()
-
     def get_server_address(self):
         return self.config.get("server_address", "localhost:25565")
-
-    def set_server_address(self, address):
-        self.config["server_address"] = address
-        self.save_config()
 
     def get_minecraft_version(self):
         return self.config.get("minecraft_version", "1.8.9")
 
-    def set_minecraft_version(self, version):
-        self.config["minecraft_version"] = version
-        self.save_config()
-
     def get_current_version(self):
         return self.config.get("version", "1.0.0")
+
+    def get_language(self):
+        return self.config.get("language", "zh")
