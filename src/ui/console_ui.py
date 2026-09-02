@@ -14,6 +14,21 @@ class ConsoleUI:
     
     def __init__(self):
         self.timestamp = True
+        self._enable_windows_ansi()
+
+    def _enable_windows_ansi(self):
+        # Windows 10 之前的控制台默认不解析 ANSI 转义序列，需手动启用 VT 模式
+        if os.name != 'nt':
+            return
+        try:
+            import ctypes
+            kernel32 = ctypes.windll.kernel32
+            handle = kernel32.GetStdHandle(-11)  # STD_OUTPUT_HANDLE
+            mode = ctypes.c_uint32()
+            if kernel32.GetConsoleMode(handle, ctypes.byref(mode)):
+                kernel32.SetConsoleMode(handle, mode.value | 0x0004)
+        except Exception:
+            pass
     
     def clear_screen(self):
         os.system('cls' if os.name == 'nt' else 'clear')

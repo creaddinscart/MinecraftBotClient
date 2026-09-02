@@ -1,31 +1,43 @@
 import os
 import sys
+import time
 import subprocess
 import shutil
 
 def build_executable():
     print("Building MinecraftBotClient executable...")
-    
+
     if not shutil.which('pyinstaller'):
         print("PyInstaller not found. Installing...")
         subprocess.check_call([sys.executable, "-m", "pip", "install", "pyinstaller"])
-    
+
     output_dir = "dist"
     build_dir = "build"
-    
-    if os.path.exists(output_dir):
-        shutil.rmtree(output_dir)
-    if os.path.exists(build_dir):
-        shutil.rmtree(build_dir)
-    
+
+    def remove_dir(path):
+        if not os.path.exists(path):
+            return
+        # Windows 下文件可能被占用（杀毒扫描/资源管理器），加重试
+        for attempt in range(5):
+            try:
+                shutil.rmtree(path)
+                return
+            except OSError:
+                time.sleep(1)
+        shutil.rmtree(path, ignore_errors=True)
+
+    remove_dir(output_dir)
+    remove_dir(build_dir)
+
     print("Compiling with PyInstaller...")
     cmd = [
-        "pyinstaller",
+        sys.executable, "-m", "PyInstaller",
         "--onefile",
-        "--windowed",
+        "--console",
+        "--clean",
+        "-y",
         "--name=MinecraftBotClient",
-        "--add-data=src/config.json:.",
-        "src/main.py"
+        "main.py"
     ]
     
     if os.path.exists("src/assets/icon.ico"):

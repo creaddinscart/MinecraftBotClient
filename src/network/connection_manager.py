@@ -2,6 +2,16 @@ import socket
 import struct
 
 class ConnectionManager:
+    VERSION_MAP = {
+        "1.8": 47, "1.8.9": 47,
+        "1.12": 315, "1.12.2": 340,
+        "1.16": 735, "1.16.5": 754,
+        "1.17": 755, "1.18": 757, "1.18.2": 758,
+        "1.19": 759, "1.19.2": 760,
+        "1.20": 763, "1.20.1": 763,
+        "26.2": 763
+    }
+
     def __init__(self):
         self.socket = None
         self.server_address = None
@@ -31,18 +41,11 @@ class ConnectionManager:
             return host, port
         return address, "25565"
     
+    def is_version_supported(self, protocol_version):
+        return protocol_version in self.VERSION_MAP
+
     def handshake(self, protocol_version, host, port):
-        version_map = {
-            "1.8": 47, "1.8.9": 47,
-            "1.12": 315, "1.12.2": 340,
-            "1.16": 735, "1.16.5": 754,
-            "1.17": 755, "1.18": 757, "1.18.2": 758,
-            "1.19": 759, "1.19.2": 760,
-            "1.20": 763, "1.20.1": 763,
-            "26.2": 763
-        }
-        
-        version_id = version_map.get(protocol_version, 47)
+        version_id = self.VERSION_MAP.get(protocol_version, 47)
         
         packet = bytearray()
         packet += self.write_varint(0x00)
