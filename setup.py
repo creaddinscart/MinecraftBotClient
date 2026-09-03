@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="MinecraftBotClient",
-    version="1.0.0",
+    version="1.0.1",
     description="MBC - Minecraft Bot Client supporting versions 1.8 to 26.2",
     author="Creaddinscart",
     packages=find_packages(),

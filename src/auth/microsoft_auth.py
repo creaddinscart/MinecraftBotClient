@@ -4,9 +4,7 @@ import time
 import requests
 
 class MicrosoftAuth:
-    """微软正版账号认证：设备码登录 → XBL → XSTS → Minecraft Token"""
 
-    # 默认公共客户端 ID（可在 config.json 的 ms_client_id 覆盖）
     DEFAULT_CLIENT_ID = "04b07795-8ddb-461a-bbee-02f9e1bf7b46"
     DEVICE_CODE_URL = "https://login.microsoftonline.com/consumers/oauth2/v2.0/devicecode"
     TOKEN_URL = "https://login.microsoftonline.com/consumers/oauth2/v2.0/token"
@@ -19,7 +17,6 @@ class MicrosoftAuth:
         self.cache = {}
         self._load_cache()
 
-    # ---------- 缓存 ----------
     def _load_cache(self):
         try:
             if os.path.exists(self.cache_file):
@@ -35,9 +32,7 @@ class MicrosoftAuth:
         except Exception:
             pass
 
-    # ---------- 对外接口 ----------
     def login(self):
-        """登录并返回 {"access_token", "uuid", "name"}，优先使用缓存的令牌"""
         mc_token = self.cache.get("mc_token")
         mc_expiry = self.cache.get("mc_expiry", 0)
         if mc_token and time.time() < mc_expiry - 60 and self.cache.get("uuid"):
@@ -66,11 +61,10 @@ class MicrosoftAuth:
         }
 
     def join_server(self, server_hash):
-        """加入正版服务器时向会话服务器确认身份"""
         token = self.cache.get("mc_token")
         uuid = self.cache.get("uuid")
         if not token or not uuid:
-            raise Exception("未登录微软账号")
+            raise Exception("Not logged in to Microsoft account")
         resp = requests.post(
             "https://sessionserver.mojang.com/session/minecraft/join",
             json={
@@ -81,9 +75,8 @@ class MicrosoftAuth:
             timeout=15
         )
         if resp.status_code != 204:
-            raise Exception(f"会话验证失败: HTTP {resp.status_code} {resp.text[:200]}")
+            raise Exception(f"Session verification failed: HTTP {resp.status_code} {resp.text[:200]}")
 
-    # ---------- 微软令牌 ----------
     def _get_msa_token(self):
         refresh_token = self.cache.get("refresh_token")
         if refresh_token:
@@ -100,9 +93,9 @@ class MicrosoftAuth:
         }, timeout=15).json()
 
         self.log("=" * 50)
-        self.log("需要登录微软正版账号（首次登录或登录已过期）")
-        self.log(f"1. 浏览器打开: {r.get('verification_uri', 'https://www.microsoft.com/link')}")
-        self.log(f"2. 输入代码: {r.get('user_code', '')}")
+        self.log("Microsoft account login required (first login or expired)")
+        self.log(f"1. Open browser: {r.get('verification_uri', 'https://www.microsoft.com/link')}")
+        self.log(f"2. Enter code: {r.get('user_code', '')}")
         self.log("=" * 50)
 
         interval = r.get("interval", 5)
@@ -125,8 +118,8 @@ class MicrosoftAuth:
             if err == "slow_down":
                 interval += 5
                 continue
-            raise Exception(f"微软登录失败: {err} - {tj.get('error_description', '')[:200]}")
-        raise Exception("微软登录超时，请重试")
+            raise Exception(f"Microsoft login failed: {err} - {tj.get('error_description', '')[:200]}")
+        raise Exception("Microsoft login timed out, please retry")
 
     def _refresh_flow(self, refresh_token):
         tj = requests.post(self.TOKEN_URL, data={
@@ -136,13 +129,12 @@ class MicrosoftAuth:
             "scope": self.SCOPE
         }, timeout=15).json()
         if "access_token" not in tj:
-            raise Exception("刷新令牌失败")
+            raise Exception("Failed to refresh token")
         if tj.get("refresh_token"):
             self.cache["refresh_token"] = tj["refresh_token"]
             self._save_cache()
         return tj["access_token"]
 
-    # ---------- Xbox / Minecraft ----------
     def _xbl_auth(self, msa_token):
         r = requests.post(
             "https://user.auth.xboxlive.com/user/authenticate",
@@ -175,10 +167,10 @@ class MicrosoftAuth:
         if r.status_code == 401:
             err = r.json().get("XErr")
             if err == 2148916233:
-                raise Exception("该微软账号没有 Minecraft（Java版）档案")
+                raise Exception("This Microsoft account does not have a Minecraft (Java Edition) profile")
             if err == 2148916238:
-                raise Exception("该账号是儿童账号，无法登录")
-            raise Exception(f"XSTS 认证失败: XErr {err}")
+                raise Exception("This account is a child account and cannot log in")
+            raise Exception(f"XSTS authentication failed: XErr {err}")
         r.raise_for_status()
         j = r.json()
         return j["Token"], j["DisplayClaims"]["xui"][0]["uhs"]
@@ -190,7 +182,7 @@ class MicrosoftAuth:
             timeout=15
         ).json()
         if "access_token" not in r:
-            raise Exception(f"获取 Minecraft 令牌失败: {str(r)[:200]}")
+            raise Exception(f"Failed to get Minecraft token: {str(r)[:200]}")
         self.cache["mc_expires_in"] = r.get("expires_in", 86400)
         return r["access_token"]
 
@@ -201,8 +193,8 @@ class MicrosoftAuth:
             timeout=15
         )
         if r.status_code != 200:
-            raise Exception("该账号未拥有 Minecraft Java 版（无法获取档案）")
+            raise Exception("This account does not own Minecraft Java Edition (cannot fetch profile)")
         p = r.json()
         if not p.get("name"):
-            raise Exception("档案为空，请先在官网创建玩家名")
+            raise Exception("Profile is empty, please create a username on the official website first")
         return p

@@ -4,11 +4,14 @@ import sys
 
 class SettingsManager:
     DEFAULT_CONFIG = {
-        "version": "1.0.0",
+        "version": "1.0.1",
         "username": "",
         "server_address": "localhost:25565",
         "minecraft_version": "1.8.9",
-        "language": "zh"
+        "language": "zh",
+        "spam_enabled": False,
+        "spam_rate": 1.0,
+        "spam_messages": ["Hello!", "Anyone there?", "GG"]
     }
 
     def __init__(self):
@@ -34,6 +37,7 @@ class SettingsManager:
 
     def load_config(self):
         config = self.DEFAULT_CONFIG.copy()
+        config["spam_messages"] = list(self.DEFAULT_CONFIG["spam_messages"])
         if os.path.exists(self.CONFIG_FILE):
             try:
                 with open(self.CONFIG_FILE, 'r', encoding='utf-8-sig') as f:
@@ -51,7 +55,7 @@ class SettingsManager:
     def save_config(self):
         try:
             with open(self.CONFIG_FILE, 'w', encoding='utf-8') as f:
-                json.dump(self.config, f, indent=2)
+                json.dump(self.config, f, indent=2, ensure_ascii=False)
         except Exception as e:
             print(f"Error saving config: {str(e)}")
 
@@ -65,7 +69,22 @@ class SettingsManager:
         return self.config.get("minecraft_version", "1.8.9")
 
     def get_current_version(self):
-        return self.config.get("version", "1.0.0")
+        return self.config.get("version", "1.0.1")
 
     def get_language(self):
         return self.config.get("language", "zh")
+
+    def get_spam_enabled(self):
+        return self.config.get("spam_enabled", False)
+
+    def get_spam_rate(self):
+        return self.config.get("spam_rate", 1.0)
+
+    def get_spam_messages(self):
+        return self.config.get("spam_messages", [])
+
+    def update_spam_config(self, enabled, rate, messages):
+        self.config["spam_enabled"] = enabled
+        self.config["spam_rate"] = rate
+        self.config["spam_messages"] = list(messages)
+        self.save_config()

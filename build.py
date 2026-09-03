@@ -27,6 +27,13 @@ def build_one(name, language):
         "--console",
         "--clean",
         "-y",
+        "--hidden-import=dns.resolver",
+        "--hidden-import=dns.name",
+        "--hidden-import=dns.rdataclass",
+        "--hidden-import=dns.rdatatype",
+        "--hidden-import=dns.resolver.answer",
+        "--hidden-import=dns.exception",
+        "--collect-all=dns",
         f"--name={name}",
         "main.py"
     ]
@@ -45,14 +52,17 @@ def build_one(name, language):
 
     config_path = os.path.join("dist", f"config.{language}.json")
     config = {
-        "version": "1.0.0",
+        "version": "1.0.1",
         "username": "",
         "server_address": "localhost:25565",
         "minecraft_version": "1.8.9",
-        "language": language
+        "language": language,
+        "spam_enabled": False,
+        "spam_rate": 1.0,
+        "spam_messages": ["Hello!", "Anyone there?", "GG"]
     }
-    with open(config_path, 'w') as f:
-        json.dump(config, f, indent=2)
+    with open(config_path, 'w', encoding='utf-8') as f:
+        json.dump(config, f, indent=2, ensure_ascii=False)
 
 def main():
     if not shutil.which('pyinstaller'):
