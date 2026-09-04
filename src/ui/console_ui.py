@@ -102,7 +102,7 @@ class ConsoleUI:
         self._safe_print(message)
 
     def get_input(self, prompt):
-        if os.name == 'nt':
+        if os.name == 'nt' and sys.stdin is not None and sys.stdin.isatty():
             return self._get_input_msvcrt(prompt)
         else:
             return self._get_input_standard(prompt)

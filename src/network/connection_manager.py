@@ -250,18 +250,73 @@ class ConnectionManager:
         self.on_disconnect = None
 
     def is_version_supported(self, protocol_version):
-        return protocol_version in self.VERSION_MAP
+        ver_tuple = self._parse_version_tuple(protocol_version)
+        if ver_tuple is None:
+            return False
+        known = sorted(self._version_entries(), key=lambda x: x[0])
+        low = known[0][0]
+        high = known[-1][0]
+        return low <= ver_tuple <= high
+
+    @staticmethod
+    def _parse_version_tuple(version_str):
+        try:
+            parts = tuple(int(p) for p in str(version_str).strip().split('.'))
+        except (ValueError, AttributeError):
+            return None
+        if not parts:
+            return None
+        parts = parts[:3]
+        return parts + (0,) * (3 - len(parts))
+
+    @classmethod
+    def _version_entries(cls):
+        entries = []
+        for name, pid in cls.VERSION_MAP.items():
+            t = cls._parse_version_tuple(name)
+            if t:
+                entries.append((t, pid))
+        return entries
+
+    @classmethod
+    def resolve_protocol(cls, version_str):
+        if version_str in cls.VERSION_MAP:
+            return cls.VERSION_MAP[version_str], True
+        target = cls._parse_version_tuple(version_str)
+        if target is None:
+            return cls.VERSION_MAP.get("1.8.9", 47), False
+        entries = sorted(cls._version_entries(), key=lambda x: x[0])
+        chosen = entries[0][1]
+        for ver_tuple, pid in entries:
+            if ver_tuple <= target:
+                chosen = pid
+            else:
+                break
+        return chosen, False
+
+    @classmethod
+    def _packet_ids_for(cls, protocol_id):
+        if protocol_id in cls.PACKET_IDS:
+            return cls.PACKET_IDS[protocol_id]
+        keys = sorted(cls.PACKET_IDS.keys())
+        chosen = cls.PACKET_IDS[keys[0]]
+        for key in keys:
+            if key <= protocol_id:
+                chosen = cls.PACKET_IDS[key]
+        return chosen
 
     def connect(self, server_address, username, protocol_version, auth=None,
                 on_chat=None, on_disconnect=None, log_func=print):
         self.server_address = server_address
         self.username = username
-        self.protocol_id = self.VERSION_MAP.get(protocol_version, 47)
-        self.ids = self.PACKET_IDS.get(self.protocol_id, self.PACKET_IDS[47])
+        self.protocol_id, _ = self.resolve_protocol(protocol_version)
+        self.ids = self._packet_ids_for(self.protocol_id)
         self.on_chat = on_chat
         self.on_disconnect = on_disconnect
         self._log = log_func
         self.auth = auth
+        self.compression_threshold = -1
+        self.online_mode = False
 
         host, port, srv_host = self.resolve_address(server_address)
         if srv_host:

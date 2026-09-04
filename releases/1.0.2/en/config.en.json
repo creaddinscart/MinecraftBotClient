@@ -1,0 +1,15 @@
+{
+  "version": "1.0.2",
+  "username": "",
+  "server_address": "localhost:25565",
+  "minecraft_version": "1.8.9",
+  "language": "en",
+  "log_enabled": false,
+  "spam_enabled": false,
+  "spam_rate": 1.0,
+  "spam_messages": [
+    "Hello!",
+    "Anyone there?",
+    "GG"
+  ]
+}

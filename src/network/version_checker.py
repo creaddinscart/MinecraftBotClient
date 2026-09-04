@@ -1,29 +1,41 @@
-import requests
 import json
+import requests
 
 class VersionChecker:
-    VERSION_URL = "https://shit.pub/s/developer/minecraft/client/MinecraftBotClient-MBC/verify/verify.txt"
-    TIMEOUT = 10
-    
+    BASE_URL = "https://shit.pub/s/developer/minecraft/client/MinecraftBotClient-MBC/"
+    VERSION_URL = BASE_URL + "verify/txt.txt"
+    ANNOUNCEMENT_URL = BASE_URL + "announcement.txt"
+    TIMEOUT = 8
+
     def __init__(self):
         self.latest_version = None
-    
-    def fetch_latest_version(self):
+
+    def _get_text(self, url):
+        response = requests.get(url, timeout=self.TIMEOUT)
+        response.raise_for_status()
+        return response.text.strip()
+
+    def fetch_version_info(self):
+        raw = self._get_text(self.VERSION_URL)
         try:
-            response = requests.get(self.VERSION_URL, timeout=self.TIMEOUT)
-            if response.status_code == 200:
-                content = response.text.strip()
-                version_info = json.loads(content)
-                self.latest_version = version_info.get("version", None)
-                return self.latest_version
-            else:
-                raise Exception(f"HTTP Error: {response.status_code}")
-        except requests.exceptions.RequestException as e:
-            raise Exception(f"Network error: {str(e)}")
-        except json.JSONDecodeError:
-            raise Exception("Invalid JSON response from version server")
-    
+            data = json.loads(raw)
+            version = data.get("version", "")
+            self.latest_version = version or None
+            return self.latest_version, raw
+        except (json.JSONDecodeError, ValueError):
+            lines = [line.strip() for line in raw.splitlines() if line.strip()]
+            self.latest_version = lines[0] if lines else None
+            return self.latest_version, raw
+
+    def fetch_announcement(self):
+        raw = self._get_text(self.ANNOUNCEMENT_URL)
+        lines = [line for line in raw.splitlines() if line.strip()]
+        return "\n".join(lines) if lines else None
+
     def is_update_available(self, current_version):
         if not self.latest_version:
-            self.fetch_latest_version()
-        return self.latest_version and self.latest_version != current_version
+            try:
+                self.fetch_version_info()
+            except Exception:
+                return False
+        return bool(self.latest_version) and self.latest_version != current_version

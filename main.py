@@ -6,13 +6,11 @@ def main():
     from src.client.minecraft_bot_client import MinecraftBotClient
     client = MinecraftBotClient()
     client.run()
-    if not client.connected:
-        print()
-        print(i18n.t('label_not_connected_exit'))
-        try:
-            input(i18n.t('label_pause_on_close'))
-        except Exception:
-            pass
+    print()
+    try:
+        input(i18n.t('label_pause_on_close'))
+    except Exception:
+        pass
 
 if __name__ == "__main__":
     try:
