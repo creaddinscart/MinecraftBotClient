@@ -1,3 +1,11 @@
+# MinecraftBotClient MBC Minecraft Client Official website address
+- [Github](https://github.com/creaddinscart/MinecraftBotClient/)
+- [Discord](https://discord.gg/yY3nDGzSn5)
+- [QQ](https://qm.qq.com/q/4nyFIEjn04)
+- [Official Website](https://shit.pub)
+- [Our Minecraft Servers](https://shit.pub/an/tz/1007/gadd/)
+- [Search Official Support Documentation](support/)
+
 # MinecraftBotClient (MBC)
 
 Minecraft Bot Client - A lightweight bot client for Minecraft supporting versions 1.8 through 26.2.
@@ -83,4 +91,10 @@ This project is provided for educational and testing purposes only.
 
 ## Author
 
-Creaddinscart
+Creaddinscart Team
+
+
+## ©copyright
+1. [LICENSE](https://raw.githubusercontent.com/creaddinscart/MinecraftBotClient/refs/heads/main/license)View the address on GitHub.
+2. [LICENSE](https://p.shit.pub/dld/?view=license%2FTeam%2FCreaddinscart%2FMinecraftBotClient-MBC%2Flicense.txt)Check p.shit.pub for the address.
+
