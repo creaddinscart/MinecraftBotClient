@@ -1,4 +1,0 @@
-requests>=2.28.0
-cryptography>=41.0.0
-pyinstaller>=5.0.0
-dnspython>=2.3.0
