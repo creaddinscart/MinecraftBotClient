@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Minecraft Bot Client (MBC)
 
 [![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
@@ -379,4 +378,3 @@ Any unlisted version within a range is auto-mapped to the nearest known protocol
 1. [LICENSE](https://raw.githubusercontent.com/creaddinscart/MinecraftBotClient/refs/heads/main/license)View the address on GitHub.
 2. [LICENSE](https://p.shit.pub/dld/?view=license%2FTeam%2FCreaddinscart%2FMinecraftBotClient-MBC%2Flicense.txt)Check p.shit.pub for the address.
 
->>>>>>> cb38cfabbf392b3fc06a4790424e08080e6564a2
