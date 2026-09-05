@@ -6,7 +6,8 @@ Please note that the version below contains some bugs; we will explain how to us
 
 | Version | Supported          |
 | ------- | ------------------ |
-| v1.0.0  | This version has serious issues; as it is the initial release, we are no longer maintaining it. |
+| v1.0.3  | Due to an unforeseen issue, we will not be uploading version v1.0.3; instead, we will upload v1.3.1, which serves as a patch for v1.0.3. |
+| v1.3.1  | v1.0.3 branch |
 
 
 ## Usage Recommendations
