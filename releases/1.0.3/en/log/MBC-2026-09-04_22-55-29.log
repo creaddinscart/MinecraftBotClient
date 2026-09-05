@@ -1,0 +1,23 @@
+[2026-09-04 22:55:29] [LOG] Session log started
+[2026-09-04 22:55:30] [START] MBC 1.0.3 launched, lang=en, fast_start=False
+[2026-09-04 22:55:32] [VERSION] You are running the latest version (1.0.3)
+[2026-09-04 22:55:33] [ANNOUNCE] <html>
+[2026-09-04 22:55:33] [ANNOUNCE] <head><title>404 Not Found</title></head>
+[2026-09-04 22:55:33] [ANNOUNCE] <body>
+[2026-09-04 22:55:33] [ANNOUNCE] <center><h1>404 Not Found</h1></center>
+[2026-09-04 22:55:33] [ANNOUNCE] <hr><center>nginx/1.18.0</center>
+[2026-09-04 22:55:33] [ANNOUNCE] </body>
+[2026-09-04 22:55:33] [ANNOUNCE] </html>
+[2026-09-04 22:55:33] [CONFIG] Server: cn.shit.pub
+[2026-09-04 22:55:33] [CONFIG] Version: 26.1.2
+[2026-09-04 22:55:33] [CONFIG] Username: dsadfewe
+[2026-09-04 22:55:33] [CONFIG] Fast Start: OFF
+[2026-09-04 22:55:33] [CONFIG] Log: ON
+[2026-09-04 22:55:33] [CONNECT] Connecting to cn.shit.pub...
+[2026-09-04 22:55:34] [NET] DNS SRV: cn.shit.pub -> cn-bj1.mfrp.space:56789
+[2026-09-04 22:55:34] [NET] Detected server protocol: Velocity 1.7.2-26.2 (protocol 47), auto-adapted
+[2026-09-04 22:55:36] [CONNECT] Connected to server successfully!
+[2026-09-04 22:55:36] [CONNECT] Type text to chat, /command for server commands, //command for MBC client commands, //help for help
+[2026-09-04 22:55:39] [CHAT] dsadfewe
+[2026-09-04 22:55:45] [SEND] m
+[2026-09-04 22:55:45] [CHAT] [default] dsadfewe: m
