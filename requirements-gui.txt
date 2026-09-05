@@ -1,0 +1,10 @@
+# Core dependencies
+requests>=2.28.0
+cryptography>=3.4.8
+dnspython>=2.3.0
+
+# GUI dependencies  
+PyQt5>=5.15.7
+
+# Build dependencies
+pyinstaller>=5.0.0
