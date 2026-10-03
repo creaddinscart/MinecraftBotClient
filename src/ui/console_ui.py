@@ -63,6 +63,7 @@ class ConsoleUI:
         self._ac_pool = None
         self._ac_filter = ""
         self._console_input_handle = None
+        self._posix_buffer = b""
         self._enable_windows_ansi()
 
     def _enable_windows_ansi(self):
@@ -203,9 +204,19 @@ class ConsoleUI:
         self._ac_pool = None
 
     def get_input(self, prompt, use_ac=True):
-        if os.name == 'nt' and sys.stdin is not None and sys.stdin.isatty():
+        if sys.stdin is None:
+            return self._get_input_standard(prompt)
+        try:
+            interactive = sys.stdin.isatty()
+        except Exception:
+            interactive = False
+        if not interactive:
+            return self._get_input_standard(prompt)
+        if os.name == 'nt':
             return self._get_input_msvcrt(prompt, use_ac)
-        else:
+        try:
+            return self._get_input_posix(prompt, use_ac)
+        except (ImportError, OSError, ValueError):
             return self._get_input_standard(prompt)
 
     def _get_console_input_handle(self):
@@ -256,6 +267,100 @@ class ConsoleUI:
             return (None, 0, '', 0)
         return ('key', 0, ch, 0)
 
+    def _process_key_event(self, event, use_ac, eol='\n'):
+        kind, vk, ch, ctrl = event
+
+        if kind == 'wheel':
+            pool = self._active_pool(use_ac)
+            if pool and self._input_buffer:
+                if self._ac_index < 0:
+                    self._ac_index = 0
+                else:
+                    self._ac_index = (self._ac_index - vk) % len(pool)
+                self._redraw_input(use_ac)
+            return None
+
+        if vk == 0x0D:
+            pool = self._active_pool(use_ac)
+            result = pool[self._ac_index] if (0 <= self._ac_index < len(pool)) else self._input_buffer
+            self._input_buffer = ""
+            self._input_active = False
+            self._reset_ac()
+            sys.stdout.write(eol)
+            sys.stdout.flush()
+            if result.strip():
+                self._history.append(result.strip())
+                self._history_index = -1
+            return result
+
+        if vk == 0x09:
+            pool = self._active_pool(use_ac)
+            if not pool:
+                return None
+            if self._ac_pool is None:
+                self._ac_pool = pool
+                self._ac_index = 0
+            else:
+                self._ac_index = (self._ac_index + 1) % len(pool)
+            self._input_buffer = pool[self._ac_index]
+            self._history_index = -1
+            self._redraw_input(use_ac)
+            return None
+
+        if vk == 0x08:
+            if self._input_buffer:
+                self._input_buffer = self._input_buffer[:-1]
+                self._history_index = -1
+                self._reset_ac()
+                self._redraw_input(use_ac)
+            return None
+
+        if vk == 0x1B:
+            self._input_buffer = ""
+            self._history_index = -1
+            self._reset_ac()
+            self._redraw_input(use_ac)
+            return None
+
+        if vk in (0x26, 0x28):
+            pool = self._active_pool(use_ac)
+            if pool and self._input_buffer:
+                if self._ac_index < 0:
+                    self._ac_index = 0
+                else:
+                    step = -1 if vk == 0x26 else 1
+                    self._ac_index = (self._ac_index + step) % len(pool)
+                self._redraw_input(use_ac)
+            elif self._history:
+                if vk == 0x26:
+                    if self._history_index < 0:
+                        self._history_index = len(self._history) - 1
+                    elif self._history_index > 0:
+                        self._history_index -= 1
+                else:
+                    if 0 <= self._history_index < len(self._history) - 1:
+                        self._history_index += 1
+                    else:
+                        self._history_index = -1
+                self._input_buffer = self._history[self._history_index] if self._history_index >= 0 else ""
+                self._reset_ac()
+                self._redraw_input(use_ac)
+            return None
+
+        if (ctrl & 0x0007) and vk == 0x43:
+            self._input_active = False
+            raise KeyboardInterrupt
+        if (ctrl & 0x0007) and vk == 0x5A:
+            self._input_active = False
+            raise EOFError
+
+        if ch and ch.isprintable():
+            self._input_buffer += ch
+            self._history_index = -1
+            self._reset_ac()
+            self._redraw_input(use_ac)
+        return None
+
     def _get_input_msvcrt(self, prompt, use_ac):
         handle = self._get_console_input_handle()
         self._input_prompt = prompt
@@ -268,97 +373,157 @@ class ConsoleUI:
         sys.stdout.flush()
 
         while True:
-            kind, vk, ch, ctrl = self._read_console_event(handle) if handle else self._read_event_msvcrt()
-
-            if kind == 'wheel':
-                pool = self._active_pool(use_ac)
-                if pool and self._input_buffer:
-                    if self._ac_index < 0:
-                        self._ac_index = 0
-                    else:
-                        self._ac_index = (self._ac_index - vk) % len(pool)
-                    self._redraw_input(use_ac)
-                continue
-
-            if vk == 0x0D:
-                pool = self._active_pool(use_ac)
-                result = pool[self._ac_index] if (0 <= self._ac_index < len(pool)) else self._input_buffer
-                self._input_buffer = ""
-                self._input_active = False
-                self._reset_ac()
-                sys.stdout.write('\n')
-                sys.stdout.flush()
-                if result.strip():
-                    self._history.append(result.strip())
-                    self._history_index = -1
+            event = self._read_console_event(handle) if handle else self._read_event_msvcrt()
+            result = self._process_key_event(event, use_ac)
+            if result is not None:
                 return result
 
-            if vk == 0x09:
-                pool = self._active_pool(use_ac)
-                if not pool:
-                    continue
-                if self._ac_pool is None:
-                    self._ac_pool = pool
-                    self._ac_index = 0
-                else:
-                    self._ac_index = (self._ac_index + 1) % len(pool)
-                self._input_buffer = pool[self._ac_index]
-                self._history_index = -1
-                self._redraw_input(use_ac)
-                continue
+    def _posix_read(self, fd, timeout):
+        import select
+        try:
+            ready, _, _ = select.select([fd], [], [], timeout)
+        except (OSError, ValueError):
+            return False
+        if not ready:
+            return False
+        try:
+            data = os.read(fd, 256)
+        except OSError:
+            return False
+        if not data:
+            return False
+        self._posix_buffer += data
+        return True
 
-            if vk == 0x08:
-                if self._input_buffer:
-                    self._input_buffer = self._input_buffer[:-1]
-                    self._history_index = -1
-                    self._reset_ac()
-                    self._redraw_input(use_ac)
-                continue
+    @staticmethod
+    def _csi_end(buf):
+        if len(buf) < 3:
+            return None
+        i = 2
+        while i < len(buf):
+            if 0x40 <= buf[i] <= 0x7E:
+                return i + 1
+            i += 1
+        return None
 
-            if vk == 0x1B:
-                self._input_buffer = ""
-                self._history_index = -1
-                self._reset_ac()
-                self._redraw_input(use_ac)
-                continue
+    @staticmethod
+    def _csi_event(seq):
+        final = seq[-1:]
+        if seq[2:3] == b'<':
+            parts = seq[3:-1].split(b';')
+            if final == b'M' and parts:
+                try:
+                    button = int(parts[0])
+                except ValueError:
+                    button = -1
+                if button in (64, 65):
+                    return ('wheel', 1 if button == 64 else -1, '', 0)
+            return (None, 0, '', 0)
+        if final == b'A':
+            return ('key', 0x26, '', 0)
+        if final == b'B':
+            return ('key', 0x28, '', 0)
+        if final == b'C':
+            return ('key', 0x27, '', 0)
+        if final == b'D':
+            return ('key', 0x25, '', 0)
+        return (None, 0, '', 0)
 
-            if vk in (0x26, 0x28):
-                pool = self._active_pool(use_ac)
-                if pool and self._input_buffer:
-                    if self._ac_index < 0:
-                        self._ac_index = 0
-                    else:
-                        step = -1 if vk == 0x26 else 1
-                        self._ac_index = (self._ac_index + step) % len(pool)
-                    self._redraw_input(use_ac)
-                elif self._history:
-                    if vk == 0x26:
-                        if self._history_index < 0:
-                            self._history_index = len(self._history) - 1
-                        elif self._history_index > 0:
-                            self._history_index -= 1
-                    else:
-                        if 0 <= self._history_index < len(self._history) - 1:
-                            self._history_index += 1
-                        else:
-                            self._history_index = -1
-                    self._input_buffer = self._history[self._history_index] if self._history_index >= 0 else ""
-                    self._reset_ac()
-                    self._redraw_input(use_ac)
-                continue
+    def _posix_event(self, fd):
+        while True:
+            if not self._posix_buffer:
+                if not self._posix_read(fd, None):
+                    return None
+            b = self._posix_buffer[0]
 
-            if (ctrl & 0x0007) and vk == 0x43:
-                self._input_active = False
-                raise KeyboardInterrupt
-            if (ctrl & 0x0007) and vk == 0x5A:
-                self._input_active = False
-                raise EOFError
+            if b == 0x1B:
+                if len(self._posix_buffer) < 2:
+                    self._posix_read(fd, 0.05)
+                if len(self._posix_buffer) < 2 or self._posix_buffer[1] not in (0x5B, 0x4F):
+                    self._posix_buffer = self._posix_buffer[1:]
+                    return ('key', 0x1B, '', 0)
+                while True:
+                    end = self._csi_end(self._posix_buffer)
+                    if end is not None:
+                        seq = self._posix_buffer[:end]
+                        self._posix_buffer = self._posix_buffer[end:]
+                        return self._csi_event(seq)
+                    if not self._posix_read(fd, 0.05):
+                        self._posix_buffer = self._posix_buffer[1:]
+                        return ('key', 0x1B, '', 0)
 
-            if ch and ch.isprintable():
-                self._input_buffer += ch
-                self._history_index = -1
-                self._reset_ac()
-                self._redraw_input(use_ac)
+            if b in (0x0D, 0x0A):
+                self._posix_buffer = self._posix_buffer[1:]
+                return ('key', 0x0D, '', 0)
+            if b == 0x09:
+                self._posix_buffer = self._posix_buffer[1:]
+                return ('key', 0x09, '', 0)
+            if b in (0x7F, 0x08):
+                self._posix_buffer = self._posix_buffer[1:]
+                return ('key', 0x08, '', 0)
+            if b == 0x03:
+                self._posix_buffer = self._posix_buffer[1:]
+                return ('key', 0x43, '', 0x0001)
+            if b in (0x04, 0x1A):
+                self._posix_buffer = self._posix_buffer[1:]
+                return ('key', 0x5A, '', 0x0001)
+            if b < 0x20:
+                self._posix_buffer = self._posix_buffer[1:]
+                return (None, 0, '', 0)
+
+            need = 1
+            if 0xC2 <= b <= 0xDF:
+                need = 2
+            elif 0xE0 <= b <= 0xEF:
+                need = 3
+            elif 0xF0 <= b <= 0xF4:
+                need = 4
+            tries = 0
+            while len(self._posix_buffer) < need and tries < 6:
+                if not self._posix_read(fd, 0.05):
+                    tries += 1
+            chunk = self._posix_buffer[:need]
+            self._posix_buffer = self._posix_buffer[need:]
+            try:
+                ch = chunk.decode('utf-8')
+            except Exception:
+                ch = chunk.decode('utf-8', errors='replace')
+            return ('key', 0, ch, 0)
+
+    def _get_input_posix(self, prompt, use_ac):
+        import termios
+        fd = sys.stdin.fileno()
+        self._input_prompt = prompt
+        self._input_buffer = ""
+        self._input_active = True
+        self._history_index = -1
+        self._reset_ac()
+        self._posix_buffer = b""
+        old = termios.tcgetattr(fd)
+        try:
+            attrs = termios.tcgetattr(fd)
+            attrs[0] &= ~(termios.IXON | termios.ICRNL)
+            attrs[3] &= ~(termios.ECHO | termios.ECHONL | termios.ICANON | termios.ISIG | termios.IEXTEN)
+            attrs[6][termios.VMIN] = 1
+            attrs[6][termios.VTIME] = 0
+            termios.tcsetattr(fd, termios.TCSANOW, attrs)
+            sys.stdout.write('\033[?1000h\033[?1006h' + prompt)
+            sys.stdout.flush()
+            while True:
+                event = self._posix_event(fd)
+                if event is None:
+                    raise EOFError
+                result = self._process_key_event(event, use_ac)
+                if result is not None:
+                    return result
+        finally:
+            sys.stdout.write('\033[?1000l\033[?1006l')
+            sys.stdout.flush()
+            try:
+                termios.tcsetattr(fd, termios.TCSADRAIN, old)
+            except Exception:
+                pass
+            self._input_active = False
 
     def _get_input_standard(self, prompt):
         self._input_active = True

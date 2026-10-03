@@ -4,7 +4,7 @@ WEBSITE_URL = "https://shit.pub/s/developer/minecraft/client/MinecraftBotClient-
 
 _translations = {
     "zh": {
-        "banner_title": "Minecraft Bot Client (MBC) v1.3.1",
+        "banner_title": "Minecraft Bot Client (MBC) v2.0.0",
         "banner_sub1": "支持所有 Minecraft 版本 (1.8 - 26.2)",
         "banner_sub2": "仅供测试与开发用途",
         "section_player_info": "玩家信息",
@@ -109,7 +109,7 @@ _translations = {
         "label_pause_prompt": "按 Enter 键关闭窗口...",
     },
     "en": {
-        "banner_title": "Minecraft Bot Client (MBC) v1.3.1",
+        "banner_title": "Minecraft Bot Client (MBC) v2.0.0",
         "banner_sub1": "Supporting all Minecraft versions (1.8 - 26.2)",
         "banner_sub2": "For Testing & Development Purposes Only",
         "section_player_info": "Player Info",
@@ -213,6 +213,7 @@ _translations = {
         "label_alert_no_ground": "[ALERT] No block ahead below you - falling hazard!",
         "label_damage_stopped_walk": "[ALERT] Took damage, auto-walk halted",
         "label_autocomplete_hint": "Type . or / for a grey command preview, Tab to complete, ↑/↓ or mouse wheel to cycle, Esc to clear",
+        "label_pause_prompt": "Press Enter to close this window...",
     }
 }
 

@@ -1,12 +1,42 @@
 import os
 import sys
 import time
+import signal
+import warnings
 import traceback
+
+warnings.filterwarnings('ignore', module='urllib3')
+
 from src import i18n
 from src.client.minecraft_bot_client import MinecraftBotClient
 from src.settings.settings_manager import SettingsManager
 
+def configure_console():
+    if os.name == 'nt':
+        return
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding='utf-8', errors='replace')
+        except Exception:
+            pass
+
+def install_signal_handlers():
+    if os.name == 'nt':
+        return
+    def on_terminate(signum, frame):
+        raise SystemExit(0)
+    for name in ('SIGTERM', 'SIGHUP'):
+        sig = getattr(signal, name, None)
+        if sig is None:
+            continue
+        try:
+            signal.signal(sig, on_terminate)
+        except Exception:
+            pass
+
 def main():
+    configure_console()
+    install_signal_handlers()
     settings = SettingsManager()
     i18n.set_language(settings.get_language())
 
@@ -22,6 +52,8 @@ def main():
     try:
         client = MinecraftBotClient()
         client.run()
+    except (KeyboardInterrupt, SystemExit):
+        pass
     except Exception:
         from src.ui.console_ui import ConsoleUI
         ui = ConsoleUI()

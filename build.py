@@ -2,19 +2,59 @@ import os
 import sys
 import time
 import json
-import subprocess
 import shutil
+import hashlib
+import zipfile
+import subprocess
 
-VERSION = "1.3.1"
+VERSION = "2.0.0"
 WEBSITE_URL = "https://shit.pub/s/developer/minecraft/client/MinecraftBotClient-MBC/MBC/"
+
+if os.name == 'nt':
+    PLATFORM = "windows"
+elif sys.platform == 'darwin':
+    PLATFORM = "macos"
+else:
+    PLATFORM = "linux"
+
+BINARY_EXT = ".exe" if PLATFORM == "windows" else ""
+PLATFORM_LABEL = {"windows": "Windows", "macos": "macOS", "linux": "Linux"}[PLATFORM]
+
+RUN_HINTS = {
+    "zh": {
+        "windows": "双击 `{binary}` 运行",
+        "macos": "首次运行前执行 `chmod +x {binary}`，然后运行 `./{binary}`",
+        "linux": "首次运行前执行 `chmod +x {binary}`，然后运行 `./{binary}`",
+    },
+    "en": {
+        "windows": "Double-click `{binary}`",
+        "macos": "Run `chmod +x {binary}` once, then `./{binary}`",
+        "linux": "Run `chmod +x {binary}` once, then `./{binary}`",
+    },
+}
+
+PLATFORM_NOTES = {
+    "zh": {
+        "windows": "本版本为 Windows 单文件客户端，无需安装 Python。",
+        "macos": "本版本为 macOS 单文件客户端，无需安装 Python。若被 Gatekeeper 拦截，请右键选择“打开”，或执行 `xattr -d com.apple.quarantine {binary}` 后重试。",
+        "linux": "本版本为 Linux 单文件客户端，无需安装 Python。",
+    },
+    "en": {
+        "windows": "This is the Windows single-file client. No Python installation is required.",
+        "macos": "This is the macOS single-file client. No Python installation is required. If Gatekeeper blocks it, right-click and choose Open, or run `xattr -d com.apple.quarantine {binary}` before launching.",
+        "linux": "This is the Linux single-file client. No Python installation is required.",
+    },
+}
 
 README_ZH = """# Minecraft Bot Client (MBC) v{version} - 中文版
 
 ## 文件说明
-- `MinecraftBotClient-zh.exe` - 中文客户端，双击运行
+- `{binary}` - 中文客户端，{run}
 - `config.zh.json` - 配置文件
 - `README.zh.md` - 本说明文件
 - `log/` - 日志文件夹（开启日志后自动创建）
+
+{note}
 
 ## 配置文件 (config.zh.json)
 ```json
@@ -88,10 +128,12 @@ README_ZH = """# Minecraft Bot Client (MBC) v{version} - 中文版
 README_EN = """# Minecraft Bot Client (MBC) v{version} - English
 
 ## Files
-- `MinecraftBotClient-en.exe` - English client, double-click to run
+- `{binary}` - English client, {run}
 - `config.en.json` - Configuration file
 - `README.en.md` - This readme
 - `log/` - Log folder (created automatically when logging is enabled)
+
+{note}
 
 ## Configuration (config.en.json)
 ```json
@@ -175,8 +217,46 @@ def remove_dir(path):
     shutil.rmtree(path, ignore_errors=True)
 
 
-def build_one(name, language, output_dir):
-    print(f"\n=== Building {name} (language={language}) ===")
+def pick_icon():
+    if PLATFORM == "windows":
+        candidates = ["src/assets/icon.ico"]
+    elif PLATFORM == "macos":
+        candidates = ["src/assets/icon.icns"]
+    else:
+        candidates = ["src/assets/icon.png"]
+    for path in candidates:
+        if os.path.exists(path):
+            return path
+    return None
+
+
+def file_digest(path):
+    digest = hashlib.sha256()
+    with open(path, 'rb') as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b''):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def print_artifact(path):
+    if not os.path.exists(path):
+        return
+    print(f"  {os.path.basename(path)}  {os.path.getsize(path)} bytes  sha256={file_digest(path)}")
+
+
+def build_readme(language, binary):
+    template = README_ZH if language == "zh" else README_EN
+    return template.format(
+        version=VERSION,
+        website=WEBSITE_URL,
+        binary=binary,
+        run=RUN_HINTS[language][PLATFORM].format(binary=binary),
+        note=PLATFORM_NOTES[language][PLATFORM].format(binary=binary),
+    )
+
+
+def build_one(name, language, output_dir, package_dir):
+    print(f"\n=== Building {name} ({PLATFORM_LABEL}, language={language}) ===")
 
     remove_dir("build")
 
@@ -197,20 +277,23 @@ def build_one(name, language, output_dir):
         "main.py"
     ]
 
-    if os.path.exists("src/assets/icon.ico"):
-        cmd.insert(4, "--icon=src/assets/icon.ico")
+    icon = pick_icon()
+    if icon:
+        cmd.insert(4, f"--icon={icon}")
 
     subprocess.check_call(cmd)
 
-    src_exe = os.path.join("dist", f"{name}.exe")
-    if not os.path.exists(src_exe):
+    src_bin = os.path.join("dist", name + BINARY_EXT)
+    if not os.path.exists(src_bin):
         print(f"FAIL: {name}")
         sys.exit(1)
 
     os.makedirs(output_dir, exist_ok=True)
-    dst_exe = os.path.join(output_dir, f"{name}.exe")
-    shutil.copy2(src_exe, dst_exe)
-    print(f"OK: {dst_exe}")
+    dst_bin = os.path.join(output_dir, name + BINARY_EXT)
+    shutil.copy2(src_bin, dst_bin)
+    if PLATFORM != "windows":
+        os.chmod(dst_bin, 0o755)
+    print(f"OK: {dst_bin}")
 
     config = {
         "version": VERSION,
@@ -240,31 +323,42 @@ def build_one(name, language, output_dir):
         json.dump(config, f, indent=2, ensure_ascii=False)
     print(f"OK: {config_path}")
 
-    readme_template = README_ZH if language == "zh" else README_EN
-    readme_text = readme_template.format(version=VERSION, website=WEBSITE_URL)
     readme_path = os.path.join(output_dir, f"README.{language}.md")
     with open(readme_path, 'w', encoding='utf-8') as f:
-        f.write(readme_text)
+        f.write(build_readme(language, name + BINARY_EXT))
     print(f"OK: {readme_path}")
+
+    os.makedirs(package_dir, exist_ok=True)
+    zip_path = os.path.join(package_dir, f"{language}.zip")
+    with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as z:
+        z.write(dst_bin, f"{language}/{os.path.basename(dst_bin)}")
+        z.write(config_path, f"{language}/{os.path.basename(config_path)}")
+        z.write(readme_path, f"{language}/{os.path.basename(readme_path)}")
+
+    print("--- artifacts ---")
+    print_artifact(dst_bin)
+    print_artifact(zip_path)
 
 
 def main():
-    if not shutil.which('pyinstaller'):
+    try:
+        import PyInstaller
+    except ImportError:
         subprocess.check_call([sys.executable, "-m", "pip", "install", "pyinstaller"])
 
     remove_dir("build")
     remove_dir("dist")
 
-    version_root = os.path.join("releases", VERSION)
-    zh_dir = os.path.join(version_root, "zh")
-    en_dir = os.path.join(version_root, "en")
+    version_root = os.path.join("releases", VERSION, PLATFORM)
 
-    build_one("MinecraftBotClient-zh", "zh", zh_dir)
-    build_one("MinecraftBotClient-en", "en", en_dir)
+    build_one("MinecraftBotClient-zh", "zh", os.path.join(version_root, "zh"), version_root)
+    build_one("MinecraftBotClient-en", "en", os.path.join(version_root, "en"), version_root)
 
-    print(f"\n=== Done: releases/{VERSION}/ ===")
-    print(f"  zh/:  MinecraftBotClient-zh.exe + config.zh.json + README.zh.md")
-    print(f"  en/:  MinecraftBotClient-en.exe + config.en.json + README.en.md")
+    print(f"\n=== Done: releases/{VERSION}/{PLATFORM}/ ===")
+    print(f"  zh/  MinecraftBotClient-zh{BINARY_EXT} + config.zh.json + README.zh.md")
+    print(f"  en/  MinecraftBotClient-en{BINARY_EXT} + config.en.json + README.en.md")
+    print(f"  zh.zip / en.zip packages in the same folder")
+    print(f"  Builds are per-platform: run this script once on Windows, macOS and Linux.")
 
 
 if __name__ == "__main__":

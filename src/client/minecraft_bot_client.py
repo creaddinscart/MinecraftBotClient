@@ -346,7 +346,7 @@ class MinecraftBotClient:
                 message = self.ui.get_input(i18n.t('label_prompt_input', user=self.username)).strip()
                 if not message: continue
 
-                if message.startswith("//"):
+                if message.startswith(self.CLIENT_PREFIX) or message.startswith(self.CLIENT_PREFIX_LEGACY):
                     action = self.handle_client_command(message, allow_connect=False)
                     if action == 'exit': return 'exit'
                     if action == 'esc': return 'esc'
@@ -380,7 +380,7 @@ class MinecraftBotClient:
             except (EOFError, KeyboardInterrupt):
                 return 'exit'
             if not message: continue
-            if message.startswith("//"):
+            if message.startswith(self.CLIENT_PREFIX) or message.startswith(self.CLIENT_PREFIX_LEGACY):
                 action = self.handle_client_command(message, allow_connect=True)
                 if action == 'exit': return 'exit'
                 if action == 'reconnect': return 'reconnect'

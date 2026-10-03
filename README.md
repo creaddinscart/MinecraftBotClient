@@ -11,7 +11,7 @@
 # Minecraft Bot Client (MBC)
 
 [![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![Version](https://img.shields.io/badge/version-1.3.1-green.svg)](#)
+[![Version](https://img.shields.io/badge/version-2.0.0-green.svg)](#)
 [![License](https://img.shields.io/badge/license-MIT-lightgrey.svg)](#)
 [![Status](https://img.shields.io/badge/status-active-brightgreen.svg)](#)
 
@@ -36,13 +36,18 @@ MBC (Minecraft Bot Client) is a pure-protocol Minecraft bot client written in Py
 - 🔔 **Remote version check & announcements** — Shows remote txt content 1:1 on startup; skip with `fast_start`
 - ⚡ **Fast start** — Enable `fast_start` in config to skip network checks and reduce resource usage
 - 🌙 **Offline mode** — Designed for `online-mode=false` (cracked/offline) servers
-- 💻 **Cross-platform** — Windows / Linux / macOS, single-file exe distribution via PyInstaller
+- 💻 **Cross-platform** — Windows / macOS / Linux native builds. Autocomplete, history and mouse-wheel input work on both the Windows console API and POSIX terminals. Each platform is built on its own OS with `python build.py`
 
 ## Quick Start
 
-### Use Releases (recommended)
+### Use releases (recommended)
 
-Download `en/MinecraftBotClient-en.exe` from the [releases/](releases/) directory, place it next to `en/config.en.json`, and double-click the exe.
+Download the package for your platform from the [releases/](releases/) directory — `windows/en.zip`, `macos/en.zip` or `linux/en.zip` — and extract it anywhere. Keep `config.en.json` next to the client binary.
+
+- Windows: double-click `MinecraftBotClient-en.exe`
+- macOS / Linux: `chmod +x MinecraftBotClient-en` once, then `./MinecraftBotClient-en`
+
+On macOS an unsigned binary may be blocked by Gatekeeper. Right-click the binary and choose Open, or run `xattr -d com.apple.quarantine MinecraftBotClient-en` before launching.
 
 ### Run from source
 
@@ -51,19 +56,21 @@ pip install -r requirements.txt
 python main.py
 ```
 
-### Build exe
+Windows, macOS and Linux all work with Python 3.8 or newer.
+
+### Build
 
 ```bash
 python build.py
 ```
 
-Artifacts go into `releases/<version>/` — Chinese and English builds are separate under `zh/` and `en/` subdirectories (exe + config + README).
+PyInstaller cannot cross-compile, so run the script once on each operating system you want to ship. Artifacts go into `releases/<version>/<platform>/` — `windows`, `macos` and `linux` — each holding `zh/` and `en/` folders (binary + config + README) plus `zh.zip` and `en.zip` packages. macOS builds target the architecture of the Python running the script, so use a universal2 or Intel Python if you need to cover older Macs.
 
 ## Configuration
 
 ```json
 {
-  "version": "1.3.1",
+  "version": "2.0.0",
   "username": "",
   "server_address": "localhost:25565",
   "minecraft_version": "1.8.9",
@@ -150,31 +157,35 @@ Enable `fast_start` to skip these checks.
 
 ## Version Folder Structure
 
-Each build is placed in its own folder under `releases/<version>/`:
+Each build is placed in its own folder under `releases/<version>/<platform>/`:
 
 ```
 releases/
-├── 1.3.1/
-│   ├── zh/
-│   │   ├── MinecraftBotClient-zh.exe
-│   │   ├── config.zh.json
-│   │   └── README.zh.md
-│   └── en/
-│       ├── MinecraftBotClient-en.exe
-│       ├── config.en.json
-│       └── README.en.md
-└── ...
+└── 2.0.0/
+    ├── windows/
+    │   ├── zh/  MinecraftBotClient-zh.exe  config.zh.json  README.zh.md
+    │   ├── en/  MinecraftBotClient-en.exe  config.en.json  README.en.md
+    │   ├── zh.zip
+    │   └── en.zip
+    ├── macos/
+    │   ├── zh/  MinecraftBotClient-zh  config.zh.json  README.zh.md
+    │   ├── en/  MinecraftBotClient-en  config.en.json  README.en.md
+    │   ├── zh.zip
+    │   └── en.zip
+    └── linux/
+        └── ...
 ```
+
+Releases `1.3.1` and older keep the original Windows-only layout without a platform folder.
 
 ## Project Structure
 
 ```
 MinecraftBotClient/
-├── main.py                      # Entry point
-├── build.py                     # Build script (versioned output, bilingual)
+├── main.py                      # Entry point (POSIX console setup + signal handling)
+├── build.py                     # Per-platform build script (versioned output, bilingual)
 ├── requirements.txt             # Python dependencies
-├── README.md                    # 中文文档
-├── README.en.md                 # This file
+├── README.md                    # This file
 ├── src/
 │   ├── i18n.py                  # Bilingual dictionary + t() translation function
 │   ├── logger.py                # SessionLogger for per-session log files
@@ -188,7 +199,7 @@ MinecraftBotClient/
 │   ├── settings/
 │   │   └── settings_manager.py      # Config read/write + persistence
 │   └── ui/
-│       └── console_ui.py            # Console UI (ANSI colors / autocomplete / mouse wheel)
+│       └── console_ui.py            # Console UI (ANSI colors, autocomplete, mouse wheel; Windows console API + POSIX terminal)
 └── releases/                    # Build artifacts (versioned)
 ```
 
