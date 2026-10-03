@@ -377,6 +377,18 @@ def build_one(name, language, output_dir, package_dir):
     print_artifact(zip_path)
 
 
+def sync_website(platform_root):
+    if not os.path.isdir("HTML"):
+        print("HTML/ not found, skipping website copy")
+        return
+    site_root = os.path.join("HTML", "releases", VERSION, PLATFORM)
+    if os.path.abspath(site_root) == os.path.abspath(platform_root):
+        return
+    remove_dir(site_root)
+    shutil.copytree(platform_root, site_root)
+    print(f"OK: {site_root} (website copy)")
+
+
 def main():
     try:
         import PyInstaller
@@ -390,6 +402,8 @@ def main():
 
     build_one("MinecraftBotClient-zh", "zh", os.path.join(version_root, "zh"), version_root)
     build_one("MinecraftBotClient-en", "en", os.path.join(version_root, "en"), version_root)
+
+    sync_website(version_root)
 
     print(f"\n=== Done: releases/{VERSION}/{PLATFORM}/ ===")
     print(f"  zh/  MinecraftBotClient-zh{BINARY_EXT} + config.zh.json + README.zh.md")
