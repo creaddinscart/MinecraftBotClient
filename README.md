@@ -12,7 +12,7 @@
 
 [![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![Version](https://img.shields.io/badge/version-2.1.0-green.svg)](#)
-[![License](https://img.shields.io/badge/license-MIT-lightgrey.svg)](#)
+[![License](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/status-active-brightgreen.svg)](#)
 
 ---
@@ -276,5 +276,7 @@ Any unlisted version within a range is auto-mapped to the nearest known protocol
 
 ## ©copyright
 
-1. [LICENSE](https://raw.githubusercontent.com/creaddinscart/MinecraftBotClient/refs/heads/main/license) View the address on GitHub.
+MBC is released under the [GNU General Public License v3.0](LICENSE).
+
+1. [LICENSE](https://raw.githubusercontent.com/creaddinscart/MinecraftBotClient/refs/heads/main/LICENSE) View the address on GitHub.
 2. [LICENSE](https://p.shit.pub/dld/?view=license%2FTeam%2FCreaddinscart%2FMinecraftBotClient-MBC%2Flicense.txt) Check p.shit.pub for the address.
