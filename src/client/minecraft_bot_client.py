@@ -12,6 +12,7 @@ from src.network.connection_manager import ConnectionManager, HumanActions
 from src.settings.settings_manager import SettingsManager
 from src.ui.console_ui import ConsoleUI
 from src.features.spam import SpamManager
+from src.features.bot_swarm import BotSwarm
 
 
 class MinecraftBotClient:
@@ -72,6 +73,13 @@ class MinecraftBotClient:
             self.remote_check()
         self.apply_config()
 
+        if self.settings.get("multi_bot_enabled", False):
+            self.run_swarm()
+            self.logger.log("STOP", "MBC exited")
+            self.logger.close()
+            self.ui.print_success(i18n.t('label_goodbye'))
+            return
+
         while True:
             if not self.connected:
                 self.connect_to_server()
@@ -126,7 +134,52 @@ class MinecraftBotClient:
         self._ui_event('print_info', 'CONFIG', f"{i18n.t('label_fast_start')}: {'ON' if self.settings.get_fast_start() else 'OFF'}")
         log_state = i18n.t('label_log_state_on') if self.logger.enabled else i18n.t('label_log_state_off')
         self._ui_event('print_info', 'CONFIG', log_state)
+        if self.settings.get("multi_bot_enabled", False):
+            self._ui_event('print_info', 'CONFIG', i18n.t('label_multi_bot_state', count=int(self.settings.get("bot_count", 10) or 10)))
         self._refresh_autocomplete()
+
+    def run_swarm(self):
+        self.ui.print_section(i18n.t('section_swarm'))
+        self.swarm = BotSwarm(self.settings, log_func=self._swarm_log)
+        self.ui.set_autocomplete_items([".status", ".say ", ".exit"])
+        self.swarm.start()
+        self.ui.print_info(i18n.t('label_swarm_hint'))
+        try:
+            while True:
+                try:
+                    message = self.ui.get_input(i18n.t('label_swarm_prompt')).strip()
+                except (EOFError, KeyboardInterrupt):
+                    break
+                if not message:
+                    continue
+                if not (message.startswith(self.CLIENT_PREFIX) or message.startswith(self.CLIENT_PREFIX_LEGACY)):
+                    self.ui.print_warning(i18n.t('label_swarm_unknown'))
+                    continue
+                body = message[2:] if message.startswith(self.CLIENT_PREFIX_LEGACY) else message[1:]
+                parts = body.strip().split()
+                cmd = parts[0].lower() if parts else ""
+                if cmd in ("exit", "stop"):
+                    break
+                if cmd == "status":
+                    self.ui.print_info(i18n.t('label_swarm_status', alive=self.swarm.alive_count(), total=self.swarm.total_count()))
+                    continue
+                if cmd == "say":
+                    text = body.strip()[3:].strip()
+                    if not text:
+                        self.ui.print_info(i18n.t('label_swarm_say_usage'))
+                        continue
+                    sent = self.swarm.say(text)
+                    self._ui_event('print_sent', 'SWARM', i18n.t('label_swarm_say_sent', count=sent, text=text))
+                    continue
+                self.ui.print_warning(i18n.t('label_swarm_unknown'))
+        finally:
+            self.swarm.stop()
+            self._refresh_autocomplete()
+            self.ui.print_info(i18n.t('label_swarm_stopped'))
+
+    def _swarm_log(self, message):
+        self.ui.print_info(message)
+        self.logger.log("SWARM", message)
 
     def _refresh_autocomplete(self):
         if not self.settings.get("command_autocomplete", True):

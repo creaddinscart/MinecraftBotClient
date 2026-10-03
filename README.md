@@ -11,7 +11,7 @@
 # Minecraft Bot Client (MBC)
 
 [![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![Version](https://img.shields.io/badge/version-2.0.0-green.svg)](#)
+[![Version](https://img.shields.io/badge/version-2.1.0-green.svg)](#)
 [![License](https://img.shields.io/badge/license-MIT-lightgrey.svg)](#)
 [![Status](https://img.shields.io/badge/status-active-brightgreen.svg)](#)
 
@@ -28,6 +28,7 @@ MBC (Minecraft Bot Client) is a pure-protocol Minecraft bot client written in Py
 - 💬 **Chat & server commands** — Plain text for chat, `/` prefix for server commands
 - 🎛️ **`.` client commands** — `.help` `.esc` `.connect` `.respawn` `.log` `.walk` `.eat` `.spam` `.config` `.exit` (legacy `//` prefix still works)
 - 🤖 **Human-like actions** — Head turns and arm swings with random delays and Bézier trajectories, mimicking a real mouse to bypass common anti-cheat checks
+- 🤖 **Multi-bot mode** — Launch any number of bots from the config (20, 100, ...) with random usernames, staggered joins and automatic `/register` or `/login` after joining
 - 🚶 **Random auto-walk** — Random roaming or custom waypoints; stops automatically on damage/death
 - 🍖 **Auto-eat on damage** — Attempts to eat when health drops below a threshold, toggleable
 - 🔔 **Proximity & path alerts** — Announces nearby players and missing blocks ahead; invisible to other players
@@ -70,7 +71,7 @@ PyInstaller cannot cross-compile, so run the script once on each operating syste
 
 ```json
 {
-  "version": "2.0.0",
+  "version": "2.1.0",
   "username": "",
   "server_address": "localhost:25565",
   "minecraft_version": "1.8.9",
@@ -90,7 +91,18 @@ PyInstaller cannot cross-compile, so run the script once on each operating syste
   "proximity_distance": 5.0,
   "human_actions": true,
   "human_action_interval_min": 2.0,
-  "human_action_interval_max": 7.0
+  "human_action_interval_max": 7.0,
+  "multi_bot_enabled": false,
+  "bot_count": 10,
+  "bot_name_prefix": "Bot",
+  "bot_name_digits": 4,
+  "bot_join_delay": 0.5,
+  "bot_auth_enabled": false,
+  "bot_auth_mode": "register",
+  "bot_auth_password": "",
+  "bot_auth_delay": 1.5,
+  "bot_auth_register_command": "/register {password} {password}",
+  "bot_auth_login_command": "/login {password}"
 }
 ```
 
@@ -109,6 +121,13 @@ PyInstaller cannot cross-compile, so run the script once on each operating syste
 | `human_actions` / `human_action_interval_min/max` | Human-like actions toggle and interval seconds |
 | `log_enabled` | Enable logging by default (toggle at runtime with `.log on`) |
 | `spam_enabled` / `spam_rate` / `spam_messages` | Auto-spam toggle, rate and message templates |
+| `multi_bot_enabled` / `bot_count` | Multi-bot mode and how many bots to launch (e.g. 20, 100) |
+| `bot_name_prefix` / `bot_name_digits` | Random username prefix and the number of random digits appended |
+| `bot_join_delay` | Seconds between bot connections |
+| `bot_auth_enabled` / `bot_auth_mode` | Auto-login toggle and mode: `register`, `login` or `both` |
+| `bot_auth_password` | Password used in the auth commands |
+| `bot_auth_delay` | Seconds to wait after a bot joins before sending the auth command |
+| `bot_auth_register_command` / `bot_auth_login_command` | Command templates; `{password}` is replaced with `bot_auth_password` |
 
 ## Commands
 
@@ -131,6 +150,14 @@ PyInstaller cannot cross-compile, so run the script once on each operating syste
 | `.eat on/off` | Toggle auto-eat on damage |
 | `.config <key> [val]` | View or modify any config key (ex: `.config fast_start true`) |
 
+### Multi-bot commands (available while `multi_bot_enabled` is on)
+
+| Command | Description |
+|---------|-------------|
+| `.status` | Show how many bots are connected |
+| `.say <text>` | Broadcast a chat message from every connected bot |
+| `.exit` | Disconnect all bots and quit |
+
 ### Vanilla-style Autocomplete
 
 - Type `.` or `/` to see a grey inline preview of the command
@@ -145,6 +172,19 @@ Type `/list`, `/msg player hello`, `/tp ...` etc., same as in-game.
 ### Plain text
 
 Sent as a chat message directly.
+
+## Multi-bot mode
+
+Set `multi_bot_enabled` to `true` and pick a `bot_count` (for example 20 or 100). The client then:
+
+1. Probes the server protocol once and reuses it for every bot
+2. Generates unique random usernames from `bot_name_prefix` + `bot_name_digits` (e.g. `Bot4821`)
+3. Connects the bots one by one with `bot_join_delay` seconds between joins
+4. When `bot_auth_enabled` is on, each bot waits `bot_auth_delay` seconds after joining and then sends the configured `/register` and/or `/login` command with `bot_auth_password` — the command templates are fully editable so it works with AuthMe or any other login plugin
+
+The console switches to swarm control: `.status`, `.say <text>` and `.exit`. Every bot keeps its own connection, keepalive handling and disconnect state, and bots that fail to connect are reported and skipped.
+
+Use this only on servers you own or are allowed to test — mass-joining public servers usually violates their rules.
 
 ## Remote Version & Announcements
 
@@ -161,7 +201,7 @@ Each build is placed in its own folder under `releases/<version>/<platform>/`:
 
 ```
 releases/
-└── 2.0.0/
+└── 2.1.0/
     ├── windows/
     │   ├── zh/  MinecraftBotClient-zh.exe  config.zh.json  README.zh.md
     │   ├── en/  MinecraftBotClient-en.exe  config.en.json  README.en.md

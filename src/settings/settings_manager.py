@@ -4,7 +4,7 @@ import sys
 
 class SettingsManager:
     DEFAULT_CONFIG = {
-        "version": "2.0.0",
+        "version": "2.1.0",
         "username": "",
         "server_address": "localhost:25565",
         "minecraft_version": "1.8.9",
@@ -25,6 +25,17 @@ class SettingsManager:
         "human_actions": True,
         "human_action_interval_min": 2.0,
         "human_action_interval_max": 7.0,
+        "multi_bot_enabled": False,
+        "bot_count": 10,
+        "bot_name_prefix": "Bot",
+        "bot_name_digits": 4,
+        "bot_join_delay": 0.5,
+        "bot_auth_enabled": False,
+        "bot_auth_mode": "register",
+        "bot_auth_password": "",
+        "bot_auth_delay": 1.5,
+        "bot_auth_register_command": "/register {password} {password}",
+        "bot_auth_login_command": "/login {password}",
     }
 
     def __init__(self):
@@ -106,7 +117,7 @@ class SettingsManager:
             pass
 
     def get_current_version(self):
-        return self.config.get("version", "2.0.0")
+        return self.config.get("version", "2.1.0")
 
     def get_username(self):
         return self.config.get("username", "")

@@ -7,7 +7,7 @@ import hashlib
 import zipfile
 import subprocess
 
-VERSION = "2.0.0"
+VERSION = "2.1.0"
 WEBSITE_URL = "https://shit.pub/s/developer/minecraft/client/MinecraftBotClient-MBC/MBC/"
 
 if os.name == 'nt':
@@ -92,6 +92,13 @@ README_ZH = """# Minecraft Bot Client (MBC) v{version} - 中文版
 - `stop_walk_on_damage`: 受伤/死亡自动停止走路
 - `proximity_alerts` / `proximity_distance`: 周围玩家靠近提示与距离
 - `human_actions`: 模拟人类转头/出拳（随机延迟与轨迹，绕过常规反作弊）
+- `multi_bot_enabled` / `bot_count`: 多机器人开关与数量（可填 20、100 等），随机用户名批量进服
+- `bot_name_prefix` / `bot_name_digits`: 随机用户名前缀与随机数字位数
+- `bot_join_delay`: 机器人之间的连接间隔秒数（避免瞬间大量连接）
+- `bot_auth_enabled` / `bot_auth_mode`: 自动登录开关与模式（`register`、`login` 或 `both`）
+- `bot_auth_password`: 自动登录指令中使用的密码
+- `bot_auth_delay`: 进服后等待多少秒再发送登录指令
+- `bot_auth_register_command` / `bot_auth_login_command`: 指令模板，`{{password}}` 会替换为你的密码
 
 ## 指令说明
 进入服务器后，`.` 开头为 MBC 客户端指令（不会发给服务器，旧版 `//` 仍兼容）：
@@ -117,6 +124,12 @@ README_ZH = """# Minecraft Bot Client (MBC) v{version} - 中文版
 - `Tab` 补全预览内容，重复按 Tab 循环切换
 - `↑` / `↓` 方向键或鼠标滚轮切换建议
 - `Enter` 发送，`Esc` 清空当前输入，`↑` 还可回溯历史指令
+
+## 多机器人模式
+将 `multi_bot_enabled` 设为 `true` 并设置 `bot_count`。每个机器人使用随机用户名进服；开启 `bot_auth_enabled` 后，会在进服后自动发送 `/register` 或 `/login`（使用 `bot_auth_password`）。控制台指令：
+- `.status` - 查看当前已连接的机器人数量
+- `.say <文本>` - 让所有机器人同时发送一条聊天消息
+- `.exit` - 断开所有机器人并退出
 
 ## 说明
 - 本客户端为离线模式，请在 `online-mode=false`（破解/离线）服务器使用
@@ -171,6 +184,13 @@ README_EN = """# Minecraft Bot Client (MBC) v{version} - English
 - `stop_walk_on_damage`: Stop walking automatically on damage/death
 - `proximity_alerts` / `proximity_distance`: Nearby player alerts and distance
 - `human_actions`: Human-like head turning / arm swinging with random delays and trajectories
+- `multi_bot_enabled` / `bot_count`: launch multiple bots at once (e.g. 20, 100) with random usernames
+- `bot_name_prefix` / `bot_name_digits`: random username prefix and how many random digits it gets
+- `bot_join_delay`: seconds between bot connections (keeps the join rate gentle)
+- `bot_auth_enabled` / `bot_auth_mode`: auto-login switch and mode (`register`, `login` or `both`)
+- `bot_auth_password`: password inserted into the auth commands
+- `bot_auth_delay`: seconds to wait after joining before sending the auth command
+- `bot_auth_register_command` / `bot_auth_login_command`: command templates, `{{password}}` is replaced with your password
 
 ## Commands
 After joining a server, lines starting with `.` are MBC client commands (not sent to the server; legacy `//` still works):
@@ -196,6 +216,12 @@ After joining a server, lines starting with `.` are MBC client commands (not sen
 - `Tab` accepts the preview; press Tab repeatedly to cycle suggestions
 - `↑` / `↓` arrow keys or the mouse wheel cycle suggestions
 - `Enter` sends, `Esc` clears the input, `↑` also browses command history
+
+## Multi-bot mode
+Set `multi_bot_enabled` to `true` and choose `bot_count`. Every bot connects with its own random username, and when `bot_auth_enabled` is on it automatically sends `/register` or `/login` with your `bot_auth_password` right after joining. The console then controls the whole group:
+- `.status` - show how many bots are connected
+- `.say <text>` - broadcast a chat message from every connected bot
+- `.exit` - disconnect all bots and quit
 
 ## Notes
 - This client runs in offline mode. Use it on servers with `online-mode=false`
@@ -317,6 +343,17 @@ def build_one(name, language, output_dir, package_dir):
         "human_actions": True,
         "human_action_interval_min": 2.0,
         "human_action_interval_max": 7.0,
+        "multi_bot_enabled": False,
+        "bot_count": 10,
+        "bot_name_prefix": "Bot",
+        "bot_name_digits": 4,
+        "bot_join_delay": 0.5,
+        "bot_auth_enabled": False,
+        "bot_auth_mode": "register",
+        "bot_auth_password": "",
+        "bot_auth_delay": 1.5,
+        "bot_auth_register_command": "/register {password} {password}",
+        "bot_auth_login_command": "/login {password}",
     }
     config_path = os.path.join(output_dir, f"config.{language}.json")
     with open(config_path, 'w', encoding='utf-8') as f:

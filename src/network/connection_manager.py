@@ -273,7 +273,7 @@ class ConnectionManager:
     def connect(self, server_address, username, protocol_version, auth=None,
                 on_chat=None, on_disconnect=None, log_func=print,
                 on_health=None, on_death=None, on_damage=None,
-                on_player_spawn=None, on_position=None):
+                on_player_spawn=None, on_position=None, protocol_id=None):
         self.server_address = server_address
         self.username = username
         self.on_chat = on_chat
@@ -295,14 +295,17 @@ class ConnectionManager:
         if srv_host:
             self._log(i18n.t('label_srv_resolved', host=server_address, target=f"{srv_host}:{port}"))
 
-        detected = self.detect_protocol(host, int(port))
-        if detected:
-            det_pid, det_name = detected
-            self.protocol_id = det_pid
-            self._log(i18n.t('label_protocol_detected', name=det_name or '?', pid=det_pid))
+        if protocol_id:
+            self.protocol_id = int(protocol_id)
         else:
-            self.protocol_id, _ = self.resolve_protocol(protocol_version)
-            self._log(i18n.t('label_protocol_fallback', ver=protocol_version, pid=self.protocol_id))
+            detected = self.detect_protocol(host, int(port))
+            if detected:
+                det_pid, det_name = detected
+                self.protocol_id = det_pid
+                self._log(i18n.t('label_protocol_detected', name=det_name or '?', pid=det_pid))
+            else:
+                self.protocol_id, _ = self.resolve_protocol(protocol_version)
+                self._log(i18n.t('label_protocol_fallback', ver=protocol_version, pid=self.protocol_id))
         self.ids = self._packet_ids_for(self.protocol_id)
 
         try:
